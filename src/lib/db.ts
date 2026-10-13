@@ -87,7 +87,7 @@ export async function initNeonDbTables() {
         total_shifts_completed INT DEFAULT 0,
         average_rating NUMERIC(3, 2) DEFAULT 5.0,
         wallet_balance_inr INT DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
 
@@ -132,10 +132,71 @@ export async function initNeonDbTables() {
       );
     `;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS mk_credentials (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        user_name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        credential_type TEXT NOT NULL,
+        council_name TEXT NOT NULL,
+        registration_number TEXT NOT NULL,
+        state TEXT NOT NULL,
+        valid_upto DATE NOT NULL,
+        verification_status TEXT DEFAULT 'VERIFIED',
+        signature_hash TEXT NOT NULL,
+        tamper_flag BOOLEAN DEFAULT FALSE,
+        issued_at DATE,
+        revocation_reason TEXT
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS mk_pharmacies (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        owner_name TEXT NOT NULL,
+        license_number TEXT NOT NULL,
+        city TEXT NOT NULL,
+        state TEXT NOT NULL,
+        address TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        is_registered BOOLEAN DEFAULT TRUE
+      );
+    `;
+
     return { status: 'connected', message: 'Neon DB tables checked & initialized successfully.' };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error('Neon DB initialization error:', errorMsg);
     return { status: 'error', error: errorMsg };
+  }
+}
+
+/**
+ * Fetch shifts from Neon DB with fallback
+ */
+export async function getDbShifts(): Promise<Shift[]> {
+  const sql = getNeonSql();
+  if (!sql) return memoryStore.shifts;
+
+  try {
+    const rows = await sql`
+      SELECT 
+        id, hospital_id as "hospitalId", hospital_name as "hospitalName", hospital_city as "hospitalCity",
+        role_required as "roleRequired", specialty, title, description,
+        start_time as "startTime", end_time as "endTime", pay_rate_inr as "payRateInr",
+        escrow_funded as "escrowFunded", status, urgency,
+        assigned_worker_id as "assignedWorkerId", assigned_worker_name as "assignedWorkerName",
+        check_in_time as "checkInTime", check_out_time as "checkOutTime",
+        contract_hash as "contractHash", hospital_rating as "hospitalRating",
+        hospital_feedback as "hospitalFeedback", payout_status as "payoutStatus"
+      FROM mk_shifts
+      ORDER BY start_time ASC;
+    `;
+    return rows.length > 0 ? (rows as Shift[]) : memoryStore.shifts;
+  } catch (err) {
+    console.warn('Neon query error, using memoryStore:', err);
+    return memoryStore.shifts;
   }
 }
