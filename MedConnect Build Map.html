@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MedConnect Build Map</title>
+<style>
+/* Layout: one reading column of stacked sections; cards only where the content is a set of separate things (apps, zones). */
+:root {
+  --bg: #f4f7f6;
+  --surface: #ffffff;
+  --ink: #15242b;
+  --muted: #52666e;
+  --line: #d3dedb;
+  --accent: #0b6b5d;
+  --accent-soft: #dfefea;
+  --chain: #37498f;
+  --chain-soft: #e6e9f6;
+  --done: #1e7348;
+  --done-soft: #e0f1e7;
+  --doing: #8f5600;
+  --doing-soft: #f9ecd3;
+  --todo: #5f7179;
+  --todo-soft: #eaf0f0;
+  --display: Charter, "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1719; --surface: #152126; --ink: #e2ebe9; --muted: #9aafb3; --line: #29393d;
+    --accent: #4fc2a6; --accent-soft: #15332d; --chain: #a3b2f0; --chain-soft: #1e2646;
+    --done: #63cf98; --done-soft: #163428; --doing: #efb456; --doing-soft: #382a12;
+    --todo: #95a7ad; --todo-soft: #1c292d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1719; --surface: #152126; --ink: #e2ebe9; --muted: #9aafb3; --line: #29393d;
+  --accent: #4fc2a6; --accent-soft: #15332d; --chain: #a3b2f0; --chain-soft: #1e2646;
+  --done: #63cf98; --done-soft: #163428; --doing: #efb456; --doing-soft: #382a12;
+  --todo: #95a7ad; --todo-soft: #1c292d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
+.wrap { max-width: 68rem; margin: 0 auto; padding-inline: max(16px, 4vw); padding-block: 40px 64px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; color: var(--ink); }
+h1 { font-size: clamp(2rem, 1.4rem + 2.6vw, 3rem); line-height: 1.1; font-weight: 700; }
+h2 { font-size: 1.6rem; line-height: 1.2; font-weight: 700; }
+h3 { font-size: 1.1rem; line-height: 1.3; font-weight: 700; }
+p { margin: 0; }
+.eyebrow { font-size: .75rem; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.lede { font-size: 1.12rem; max-width: 62ch; color: var(--ink); }
+.muted { color: var(--muted); }
+.small { font-size: .9rem; }
+code, .mono { font-family: var(--mono); font-size: .86em; }
+section { display: grid; gap: 20px; min-width: 0; }
+.section-head { display: grid; gap: 6px; max-width: 70ch; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Header */
+header { display: grid; gap: 18px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.keydates { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 6px 0 0; padding: 0; list-style: none; }
+.keydates li { display: grid; gap: 2px; min-width: 0; }
+.keydates b { font-family: var(--mono); font-size: .95rem; font-variant-numeric: tabular-nums; }
+.keydates span { font-size: .78rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+
+/* Status pills */
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.done { color: var(--done); background: var(--done-soft); }
+.pill.doing { color: var(--doing); background: var(--doing-soft); }
+.pill.todo { color: var(--todo); background: var(--todo-soft); }
+
+/* Phase track */
+.phases { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.phase { display: grid; gap: 6px; align-content: start; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); min-width: 0; }
+.phase.current { border-color: var(--doing); }
+.phase .num { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+.phase .when { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.phase .milestone { font-size: .8rem; font-weight: 700; color: var(--accent); }
+.progress-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+.progress-cols > div { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.progress-cols ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; }
+
+/* Apps */
+.count-line { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .95rem; }
+.count-line b { font-family: var(--display); font-size: 1.35rem; margin-right: 4px; }
+.apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.app { display: grid; gap: 10px; align-content: start; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.app .kind { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.app dl { margin: 0; display: grid; gap: 6px; }
+.app dt { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.app dd { margin: 0; font-size: .95rem; }
+.app.ledger { background: var(--chain-soft); border-color: transparent; }
+.app.ledger .kind { color: var(--chain); }
+.areas { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.areas li { display: grid; grid-template-columns: 6.5rem 1fr; gap: 8px; font-size: .95rem; }
+.areas code { color: var(--accent); }
+
+/* Deployment map */
+.deploy { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.zone { border: 1.5px dashed var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.zone > h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.zone .tag { font-family: var(--body); font-size: .75rem; font-weight: 600; color: var(--muted); }
+.box { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 12px; display: grid; gap: 8px; min-width: 0; }
+.box.chain { background: var(--chain-soft); border-color: transparent; }
+.box .box-title { font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.box.chain .box-title { color: var(--chain); }
+.nodes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.nodes li { font-family: var(--mono); font-size: .8rem; padding: 4px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); }
+.box.chain .nodes li { background: var(--surface); border-color: transparent; }
+.nodes li.cc { color: var(--chain); font-weight: 700; }
+.phone { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: .9rem; }
+.phone .nodes li { font-family: var(--body); }
+.qa { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.qa div { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.qa h3 { font-family: var(--body); font-size: .98rem; }
+
+/* Demo story */
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto; gap: 4px 14px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.steps li::before { content: counter(step); font-family: var(--display); font-weight: 700; font-size: 1.25rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.steps .what { min-width: 0; }
+.steps .what b { margin-right: 6px; }
+.steps .who { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.chip { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; white-space: nowrap; }
+.chip.c-ledger { background: var(--chain-soft); color: var(--chain); }
+.steps li.optional { color: var(--muted); }
+
+/* Ledger split */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.split > div { padding: 18px; border-radius: 8px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.split .on { background: var(--chain-soft); }
+.split .off { background: var(--surface); border: 1px solid var(--line); }
+.split ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; }
+
+/* How we work */
+.loop { margin: 0; padding: 0; list-style: none; counter-reset: loop; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.loop li { counter-increment: loop; display: grid; gap: 6px; align-content: start; padding: 14px; border-top: 3px solid var(--accent); background: var(--surface); min-width: 0; }
+.loop li::before { content: "Step " counter(loop); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.note { padding: 14px 16px; background: var(--accent-soft); border-radius: 8px; max-width: 75ch; }
+
+/* Open decisions */
+.decisions { margin: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.decisions > div { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: 4px 20px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.decisions dt { font-weight: 600; }
+.decisions dd { margin: 0; color: var(--muted); }
+@media (max-width: 560px) {
+  .decisions > div { grid-template-columns: 1fr; }
+  .steps li { grid-template-columns: 2rem minmax(0, 1fr); }
+  .steps .who { grid-column: 2; justify-content: flex-start; }
+  .areas li { grid-template-columns: 1fr; gap: 0; }
+}
+footer { border-top: 1px solid var(--line); padding-top: 18px; font-size: .85rem; color: var(--muted); display: grid; gap: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Prototype for the council review · December 2026</p>
+  <h1>MedConnect build map</h1>
+  <p class="lede">A healthcare staffing prototype where the medical or nursing council issues each doctor's and nurse's registration as a tamper-evident digital credential. Hospitals verify it by QR against a shared ledger, and when the council revokes it, every hospital sees the change at once.</p>
+  <ul class="keydates" aria-label="Key dates">
+    <li><span>Status as of</span><b>Sun 11 Oct 2026</b></li>
+    <li><span>M1 trust thread</span><b>Thu 5 Nov</b></li>
+    <li><span>M2 feature-complete</span><b>Fri 20 Nov</b></li>
+    <li><span>Code freeze</span><b>Fri 4 Dec</b></li>
+    <li><span>Council meeting</span><b>Dec, date TBC</b></li>
+  </ul>
+</header>
+
+<section aria-labelledby="where">
+  <div class="section-head">
+    <p class="eyebrow">Progress</p>
+    <h2 id="where">Where we are</h2>
+    <p class="muted">Nine phases. Phase 0 is done; Phase 1 has started but missed its 9 Oct target and is being tidied up before anything new is built.</p>
+  </div>
+  <ol class="phases">
+    <li class="phase"><span class="num">Phase 0</span><h3>Setup and decisions</h3><span class="when">Before 5 Oct</span><span class="pill done">Done</span></li>
+    <li class="phase current"><span class="num">Phase 1</span><h3>Foundation and two spikes</h3><span class="when">5–9 Oct</span><span class="pill doing">In progress · behind</span></li>
+    <li class="phase"><span class="num">Phase 2</span><h3>Ledger network and chaincode</h3><span class="when">12–23 Oct</span><span class="pill todo">Not started</span></li>
+    <li class="phase"><span class="num">Phase 3</span><h3>Credentials, verifier, phone wallet</h3><span class="when">19 Oct – 5 Nov</span><span class="milestone">M1 · Thu 5 Nov</span><span class="pill todo">Not started</span></li>
+    <li class="phase"><span class="num">Phase 4</span><h3>Marketplace API</h3><span class="when">26 Oct – 13 Nov</span><span class="pill todo">Not started</span></li>
+    <li class="phase"><span class="num">Phase 5</span><h3>Web portals</h3><span class="when">2–20 Nov</span><span class="pill todo">Not started</span></li>
+    <li class="phase"><span class="num">Phase 6</span><h3>Mobile app</h3><span class="when">9–20 Nov</span><span class="milestone">M2 · Fri 20 Nov</span><span class="pill todo">Not started</span></li>
+    <li class="phase"><span class="num">Phase 7</span><h3>Hardening</h3><span class="when">23–27 Nov</span><span class="pill todo">Not started</span></li>
+    <li class="phase"><span class="num">Phase 8</span><h3>Demo readiness and freeze</h3><span class="when">30 Nov – 4 Dec</span><span class="milestone">Freeze · Fri 4 Dec</span><span class="pill todo">Not started</span></li>
+  </ol>
+  <div class="progress-cols">
+    <div>
+      <h3>Done</h3>
+      <ul class="small">
+        <li>Product brief, architecture, threat model and compliance register</li>
+        <li>25 recorded decisions, from ledger design to schedule and version pins</li>
+        <li>Developer tools installed and checked on the laptop; Android SDK ready</li>
+        <li>Security, ledger and compliance review of the design passed; merged on 4 Oct</li>
+      </ul>
+    </div>
+    <div>
+      <h3>In progress</h3>
+      <ul class="small">
+        <li>Code skeleton for all apps and packages exists; lint and tests run</li>
+        <li>Being brought in line with the agreed versions and security rules before it is committed</li>
+        <li>Local database, secret scanning and CI set-up drafted</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Next</h3>
+      <ul class="small">
+        <li>Finish Phase 1 cleanly</li>
+        <li>Fabric spike: run a small ledger network on the laptop and test record locks</li>
+        <li>Phone spike: install a build on the Android phone, store a device key, scan a QR</li>
+        <li>Then Phase 2: the real three-organisation ledger</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="apps">
+  <div class="section-head">
+    <p class="eyebrow">The product</p>
+    <h2 id="apps">What we are building</h2>
+  </div>
+  <p class="count-line" aria-label="Component count">
+    <span><b>3</b>apps people use</span>
+    <span><b>1</b>back-end service</span>
+    <span><b>1</b>ledger network with 2 chaincodes</span>
+    <span><b>2</b>data stores</span>
+  </p>
+  <div class="apps">
+    <article class="app">
+      <p class="kind">App 1 · Android phone</p>
+      <h3>Provider app</h3>
+      <dl>
+        <dt>Used by</dt><dd>Doctors and nurses</dd>
+        <dt>Does</dt><dd>Sign-up, credential wallet, shift applications, scanning the hospital's verification QR, electronic consent, work history</dd>
+        <dt>Built with</dt><dd>Expo (React Native)</dd>
+      </dl>
+    </article>
+    <article class="app">
+      <p class="kind">App 2 · Browser</p>
+      <h3>Web portals</h3>
+      <ul class="areas">
+        <li><code>/council</code><span>Council registrars issue and revoke credentials</span></li>
+        <li><code>/hospital</code><span>Hospitals post shifts, see explained rankings, verify by QR, give consent, issue completion attestations</span></li>
+        <li><code>/ops</code><span>Admin dashboard for platform staff: reviews, appeals, device changes, erasure requests</span></li>
+      </ul>
+      <dl><dt>Built with</dt><dd>Next.js, one app with three signed-in areas</dd></dl>
+    </article>
+    <article class="app">
+      <p class="kind">App 3 · Browser, public</p>
+      <h3>Public verifier</h3>
+      <dl>
+        <dt>Used by</dt><dd>Anyone, no login</dd>
+        <dt>Does</dt><dd>Checks a credential and work history against the ledger only. It keeps working with the rest of the platform switched off.</dd>
+        <dt>Runs at</dt><dd><span class="mono">127.0.0.1:3100</span>, its own address</dd>
+      </dl>
+    </article>
+    <article class="app">
+      <p class="kind">Back-end service</p>
+      <h3>Marketplace API</h3>
+      <dl>
+        <dt>Does</dt><dd>Shifts, explainable scoring, consent records, audit log. A worker queues every ledger write and retries it; a listener keeps statuses in sync.</dd>
+        <dt>Built with</dt><dd>NestJS on <span class="mono">:4000</span></dd>
+      </dl>
+    </article>
+    <article class="app ledger">
+      <p class="kind">Ledger network</p>
+      <h3>Hyperledger Fabric 2.5</h3>
+      <dl>
+        <dt>Members</dt><dd>Council, Platform and Hospital organisations, each with a peer and a certificate authority, plus one ordering node</dd>
+        <dt>Chaincodes</dt><dd><span class="mono">council</span>: council issuers and credential status<br><span class="mono">medconnect</span>: hospital issuers, contract and attestation anchors</dd>
+      </dl>
+    </article>
+    <article class="app">
+      <p class="kind">Data stores</p>
+      <h3>Off-chain data</h3>
+      <dl>
+        <dt>PostgreSQL</dt><dd>Accounts, shifts and applications; personal fields encrypted</dd>
+        <dt>Encrypted file store</dt><dd>Shift contract documents</dd>
+        <dt>Outside services</dt><dd>Identity checks, HPR/HFR registries and SMS are simulated in the prototype</dd>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<section aria-labelledby="runs">
+  <div class="section-head">
+    <p class="eyebrow">Deployment</p>
+    <h2 id="runs">Where everything runs</h2>
+    <p class="muted">For the demo, everything runs on one laptop and works offline. In production each organisation would run its own part.</p>
+  </div>
+  <div class="deploy">
+    <div class="zone" aria-label="Prototype deployment">
+      <h3>Prototype: one laptop <span class="tag">Docker Compose · 127.0.0.1 only</span></h3>
+      <div class="box">
+        <p class="box-title">Marketplace</p>
+        <ul class="nodes"><li>web portals :3000</li><li>API + worker :4000</li><li>PostgreSQL :5432</li><li>encrypted file store</li></ul>
+      </div>
+      <div class="box">
+        <p class="box-title">Verifier</p>
+        <ul class="nodes"><li>public verifier :3100</li></ul>
+      </div>
+      <div class="box chain">
+        <p class="box-title">Ledger</p>
+        <ul class="nodes"><li>peer0.council</li><li>peer0.platform</li><li>peer0.hospital</li><li>orderer :7050</li><li>4 certificate authorities</li><li class="cc">chaincode: council</li><li class="cc">chaincode: medconnect</li></ul>
+      </div>
+      <div class="phone">
+        <ul class="nodes"><li>Android phone with the provider app</li></ul>
+        <span class="muted small">connected by USB cable</span>
+      </div>
+    </div>
+    <div class="zone" aria-label="Production intent">
+      <h3>Production (intent) <span class="tag">to be decided after the meeting</span></h3>
+      <div class="box chain">
+        <p class="box-title">Council</p>
+        <ul class="nodes"><li>peer0.council</li><li>issuer key in a hardware security module</li></ul>
+      </div>
+      <div class="box chain">
+        <p class="box-title">Hospitals or a hospital consortium</p>
+        <ul class="nodes"><li>peer0.hospital</li><li>hospital signing keys</li></ul>
+      </div>
+      <div class="box">
+        <p class="box-title">Platform operator</p>
+        <ul class="nodes"><li>peer0.platform</li><li>marketplace API</li><li>web portals and admin dashboard</li><li>public verifier</li></ul>
+      </div>
+      <p class="small muted">Who operates the nodes and where they are hosted is still open.</p>
+    </div>
+  </div>
+  <div class="qa">
+    <div><h3>How many apps?</h3><p class="small">Three that people use: the provider phone app, the web portals and the public verifier. Behind them sit the API, the ledger network and two data stores.</p></div>
+    <div><h3>Where does the chaincode run?</h3><p class="small">On every organisation's peer. Each chaincode runs as its own container beside the peers; in the demo all of them are on the laptop.</p></div>
+    <div><h3>Where is the admin dashboard?</h3><p class="small">It is the <code>/ops</code> area of the web portals, run by the platform. In the demo it opens in the laptop's browser.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="demo">
+  <div class="section-head">
+    <p class="eyebrow">The December demo</p>
+    <h2 id="demo">The story we will show</h2>
+    <p class="muted">About 12 minutes, with fictional people and hospitals marked DEMO. Each step must pass the automated demo check.</p>
+  </div>
+  <ol class="steps">
+    <li><span class="what"><b>Issue.</b>A council registrar checks an application and issues the credential. The screen shows the ledger transaction.</span><span class="who"><span class="chip">Council portal</span><span class="chip c-ledger">Ledger</span></span></li>
+    <li><span class="what"><b>Wallet.</b>The doctor receives the credential on their phone.</span><span class="who"><span class="chip">Phone</span></span></li>
+    <li><span class="what"><b>Post.</b>A DEMO hospital in Pune posts an ICU night shift; a nurse shift is already open.</span><span class="who"><span class="chip">Hospital portal</span></span></li>
+    <li><span class="what"><b>Match.</b>Ranked candidates, each with a plain-English reason. A revoked doctor and a nurse registered only in another state are excluded, with the reason shown.</span><span class="who"><span class="chip">Hospital portal</span></span></li>
+    <li><span class="what"><b>Verify.</b>The doctor scans the hospital's one-time QR and unlocks with the phone's own fingerprint lock. Signature and ledger status check out.</span><span class="who"><span class="chip">Phone</span><span class="chip">Verifier</span><span class="chip c-ledger">Ledger</span></span></li>
+    <li><span class="what"><b>Consent.</b>Hospital and doctor both give electronic consent to the shift contract; its hash goes on the ledger.</span><span class="who"><span class="chip">Hospital portal</span><span class="chip">Phone</span><span class="chip c-ledger">Ledger</span></span></li>
+    <li><span class="what"><b>Attest.</b>After the shift, the hospital issues a completion attestation that appears as work history.</span><span class="who"><span class="chip">Hospital portal</span><span class="chip">Phone</span><span class="chip c-ledger">Ledger</span></span></li>
+    <li><span class="what"><b>Revoke.</b>The council revokes another doctor's credential; the public verifier shows REVOKED within seconds.</span><span class="who"><span class="chip">Council portal</span><span class="chip">Verifier</span></span></li>
+    <li><span class="what"><b>Tamper.</b>A script edits a stored contract; verification shows TAMPERED because the hash no longer matches the ledger.</span><span class="who"><span class="chip c-ledger">Ledger</span></span></li>
+    <li><span class="what"><b>Erase.</b>The doctor asks for their account to be deleted; personal data is removed, and the ledger keeps only hashes that can't be tied back to them without a copy of the original documents.</span><span class="who"><span class="chip">Phone</span><span class="chip">Admin dashboard</span></span></li>
+    <li class="optional"><span class="what"><b>Resilience (optional).</b>Switch the whole marketplace off; the public verifier still answers.</span><span class="who"><span class="chip">Verifier</span></span></li>
+  </ol>
+</section>
+
+<section aria-labelledby="ledger">
+  <div class="section-head">
+    <p class="eyebrow">Privacy by design</p>
+    <h2 id="ledger">What goes on the ledger</h2>
+  </div>
+  <div class="split">
+    <div class="on">
+      <h3>On the ledger</h3>
+      <ul class="small">
+        <li>Random record IDs</li>
+        <li>Hashes of credentials, contracts and attestations</li>
+        <li>Statuses such as ACTIVE or REVOKED</li>
+        <li>Issuer IDs and organisations' public keys</li>
+        <li>Validity dates and transaction times</li>
+      </ul>
+    </div>
+    <div class="off">
+      <h3>Off the ledger, encrypted</h3>
+      <ul class="small">
+        <li>Names, phone numbers, email addresses</li>
+        <li>Registration numbers such as <span class="mono">DEMO-MH-000123</span></li>
+        <li>Contract documents</li>
+        <li>The random salts that link hashes to a person; deleting them breaks the link</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted">No identifying data goes on-chain. The ledger makes records tamper-evident; it does not store who people are.</p>
+</section>
+
+<section aria-labelledby="how">
+  <div class="section-head">
+    <p class="eyebrow">Process</p>
+    <h2 id="how">How we work</h2>
+    <p class="muted">Every phase follows the same loop, and the team's meeting notes feed into it.</p>
+  </div>
+  <ol class="loop">
+    <li><h3>Team meets</h3><p class="small">Discussion notes go into the private notes folder.</p></li>
+    <li><h3>Notes are cross-checked</h3><p class="small">Claude reads the new notes and flags anything that changes scope or raises a compliance or security question.</p></li>
+    <li><h3>Abhishek decides</h3><p class="small">Each decision is recorded with its reasons, so the build follows what was agreed.</p></li>
+    <li><h3>Plan the phase</h3><p class="small">A short plan with steps, tests and risks, approved before any code changes.</p></li>
+    <li><h3>Build in small steps</h3><p class="small">Claude or the backup models build one step at a time. Lint, type checks, tests and a secret scan run on every step.</p></li>
+    <li><h3>Review and hand back</h3><p class="small">Work done by the backup models is reviewed by Claude and kept, fixed or reverted.</p></li>
+    <li><h3>Close the phase</h3><p class="small">Security, ledger and compliance review, progress log, push to the private GitHub repository.</p></li>
+  </ol>
+  <p class="note small">Only synthetic data is used: fictional people and hospitals with a visible DEMO marker. Payments, tokens, insurance and real government or registry connections are outside the prototype.</p>
+</section>
+
+<section aria-labelledby="open">
+  <div class="section-head">
+    <p class="eyebrow">Needs input</p>
+    <h2 id="open">Open decisions</h2>
+  </div>
+  <dl class="decisions">
+    <div><dt>Council name</dt><dd>The council's exact legal name and permission to show it in the demo. Until then the placeholder is "State Medical Council (DEMO)".</dd></div>
+    <div><dt>Meeting date</dt><dd>Not fixed. The plan assumes on or after 11 Dec, with the code freeze one week earlier.</dd></div>
+    <div><dt>Demo state</dt><dd>The demo data is set in Maharashtra (Pune). If the launch or the council is in Tamil Nadu, switch it before the seed data is written.</dd></div>
+    <div><dt>System of medicine</dt><dd>Whether the credential records the practitioner's system of medicine, so matching can respect it.</dd></div>
+    <div><dt>Production hosting</dt><dd>Who runs each ledger node after the prototype, and where.</dd></div>
+  </dl>
+</section>
+
+<footer>
+  <p>Sources: project brief, architecture, decisions log and progress log in the repository's <span class="mono">docs/</span> folder.</p>
+  <p>Prototype only. All people and hospitals shown in the demo are fictional.</p>
+</footer>
+
+</div>
+</body>
+</html>
