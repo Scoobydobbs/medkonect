@@ -220,14 +220,60 @@ export default function TelecarePage() {
             </div>
           </div>
 
-          {/* Prescriptions & Consultation History */}
-          <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileText className="w-4 h-4 text-purple-600" />
-              <span>Digital E-Prescriptions & Clinical Diagnoses</span>
-            </h2>
+          {/* Active Appointments & Live Video Consultations */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Video className="w-4 h-4 text-purple-600" />
+                  <span>Scheduled Telecare Appointments</span>
+                </span>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                  {appointments.length} Visits
+                </span>
+              </h2>
 
+              <div className="grid grid-cols-1 gap-3">
+                {appointments.map((appt) => (
+                  <div
+                    key={appt.id}
+                    className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">
+                          {appt.doctorName}
+                        </span>
+                        <span className="text-xs text-slate-400">({appt.doctorSpecialty})</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          {appt.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Patient: <strong>{appt.patientName}</strong> · Symptoms: {appt.symptoms}
+                      </p>
+                    </div>
+
+                    <a
+                      href={`/telecare/room/${appt.id}`}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-purple-600/20"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      Enter Live Video Room
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Prescriptions & Consultation History */}
             <div className="space-y-4">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FileText className="w-4 h-4 text-purple-600" />
+                <span>Digital E-Prescriptions & Clinical Diagnoses</span>
+              </h2>
+
+              <div className="space-y-4">
               {prescriptions.map((presc) => (
                 <div
                   key={presc.id}
@@ -305,6 +351,7 @@ export default function TelecarePage() {
             </div>
           </div>
         </div>
+      </div>
       ) : (
         /* Doctor Clinical Prescribing View */
         <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">

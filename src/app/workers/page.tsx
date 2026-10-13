@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { ProBadgePill } from '@/components/ProBadgePill';
+import { DigitalIdCard } from '@/components/DigitalIdCard';
+import { QrScannerModal } from '@/components/QrScannerModal';
 import { UserRole } from '@/lib/types';
 import {
   Stethoscope,
@@ -19,6 +21,8 @@ import {
   AlertCircle,
   Award,
   Filter,
+  CreditCard,
+  Camera,
 } from 'lucide-react';
 
 export default function WorkersTalentPage() {
@@ -37,6 +41,8 @@ export default function WorkersTalentPage() {
   const [selectedCity, setSelectedCity] = useState<string>('all');
   const [applyFeedback, setApplyFeedback] = useState<{ message: string; isError?: boolean } | null>(null);
   const [showQrModal, setShowQrModal] = useState<string | null>(null);
+  const [showIdCardModal, setShowIdCardModal] = useState<boolean>(false);
+  const [activeScanShift, setActiveScanShift] = useState<{ id: string; title: string } | null>(null);
 
   // Worker credentials
   const currentCred = credentials.find((c) => c.userId === currentUser.id);
@@ -165,6 +171,14 @@ export default function WorkersTalentPage() {
               <Wallet className="w-3.5 h-3.5" />
               Transfer to Bank / UPI
             </button>
+
+            <button
+              onClick={() => setShowIdCardModal(true)}
+              className="w-full mt-2 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              View Official Digital Council ID
+            </button>
           </div>
         </div>
       </div>
@@ -229,14 +243,11 @@ export default function WorkersTalentPage() {
                 <div className="flex items-center gap-2">
                   {shift.status === 'ASSIGNED' ? (
                     <button
-                      onClick={() => {
-                        checkInShift(shift.id);
-                        setShowQrModal(shift.id);
-                      }}
+                      onClick={() => setActiveScanShift({ id: shift.id, title: shift.title })}
                       className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-2 shadow-sm"
                     >
-                      <QrCode className="w-4 h-4" />
-                      Report to Hospital & Check-In
+                      <Camera className="w-4 h-4" />
+                      Scan Hospital Gate QR (Camera)
                     </button>
                   ) : shift.status === 'IN_PROGRESS' ? (
                     <button
@@ -350,6 +361,32 @@ export default function WorkersTalentPage() {
           ))}
         </div>
       </div>
+
+      {/* Camera QR Scanner Modal */}
+      {activeScanShift && (
+        <QrScannerModal
+          shiftTitle={activeScanShift.title}
+          onSuccess={() => {
+            checkInShift(activeScanShift.id);
+            setActiveScanShift(null);
+            setShowQrModal(activeScanShift.id);
+          }}
+          onClose={() => setActiveScanShift(null)}
+        />
+      )}
+
+      {/* Official Digital Council ID Card Modal */}
+      {showIdCardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-teal-500/30 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <DigitalIdCard
+              user={currentUser}
+              credential={currentCred}
+              onClose={() => setShowIdCardModal(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* QR Check-in Modal */}
       {showQrModal && (

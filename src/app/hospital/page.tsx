@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { ProBadgePill } from '@/components/ProBadgePill';
+import { HospitalGateQr } from '@/components/HospitalGateQr';
 import { Shift, UserRole } from '@/lib/types';
 import {
   Building2,
@@ -16,6 +17,7 @@ import {
   AlertCircle,
   Sparkles,
   Lock,
+  QrCode,
 } from 'lucide-react';
 
 export default function HospitalPortalPage() {
@@ -31,6 +33,7 @@ export default function HospitalPortalPage() {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>(hospitals[1].id); // Fortis Mumbai default
   const [showPostModal, setShowPostModal] = useState<boolean>(false);
   const [showRatingModal, setShowRatingModal] = useState<Shift | null>(null);
+  const [gateQrShift, setGateQrShift] = useState<Shift | null>(null);
   const [ratingScore, setRatingScore] = useState<number>(5);
   const [feedbackText, setFeedbackText] = useState<string>('Punctual, professional, and handled clinical duties flawlessly.');
 
@@ -217,6 +220,14 @@ export default function HospitalPortalPage() {
                       <Lock className="w-3 h-3" />
                       <span>{shift.escrowFunded ? 'Escrow Secured' : 'Unfunded'}</span>
                     </div>
+                    <button
+                      onClick={() => setGateQrShift(shift)}
+                      className="mt-1 px-2 py-0.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] font-semibold flex items-center gap-1"
+                      title="Display Hospital Gate Check-in QR"
+                    >
+                      <QrCode className="w-3 h-3 text-teal-600" />
+                      <span>Gate QR</span>
+                    </button>
                   </div>
                 </div>
 
@@ -462,6 +473,16 @@ export default function HospitalPortalPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Hospital Gate Check-In QR Modal */}
+      {gateQrShift && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <HospitalGateQr
+            shift={gateQrShift}
+            onClose={() => setGateQrShift(null)}
+          />
         </div>
       )}
 

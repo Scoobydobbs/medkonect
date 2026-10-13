@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Sparkles,
+  BarChart3,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -32,6 +33,7 @@ export const Navbar: React.FC = () => {
     { href: '/verify', label: 'Council & Verify', icon: ShieldCheck },
     { href: '/telecare', label: 'Telecare & Diagnosis', icon: Video },
     { href: '/pharmacy', label: 'Pharmacy Hub', icon: Pill },
+    { href: '/admin', label: 'Ops & Analytics', icon: BarChart3 },
   ];
 
   return (
