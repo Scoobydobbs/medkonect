@@ -38,6 +38,7 @@ interface AppContextType {
   applyForShift: (shiftId: string) => { success: boolean; message: string };
   checkInShift: (shiftId: string) => void;
   checkOutShift: (shiftId: string) => void;
+  requestShiftReplacement: (shiftId: string, reason: string) => void;
   approveShiftPayout: (shiftId: string, rating: number, feedback: string) => void;
   postShift: (shiftData: Omit<Shift, 'id' | 'status' | 'escrowFunded'>) => void;
   revokeCredential: (credId: string, reason: string) => void;
@@ -138,6 +139,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               status: 'COMPLETED',
               checkOutTime: now,
               payoutStatus: 'ESCROW_HELD',
+            }
+          : s
+      )
+    );
+  };
+
+  const requestShiftReplacement = (shiftId: string, reason: string) => {
+    setShifts((prev) =>
+      prev.map((s) =>
+        s.id === shiftId
+          ? {
+              ...s,
+              status: 'OPEN',
+              urgency: 'HIGH',
+              title: `${s.title} [URGENT REPLACEMENT NEEDED]`,
+              description: `Previous practitioner requested replacement: "${reason}". Immediate coverage required.`,
+              assignedWorkerId: undefined,
+              assignedWorkerName: undefined,
+              checkInTime: undefined,
+              contractHash: undefined,
             }
           : s
       )
@@ -355,6 +376,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         applyForShift,
         checkInShift,
         checkOutShift,
+        requestShiftReplacement,
         approveShiftPayout,
         postShift,
         revokeCredential,

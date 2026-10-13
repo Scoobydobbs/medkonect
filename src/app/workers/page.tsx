@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { ProBadgePill } from '@/components/ProBadgePill';
 import { DigitalIdCard } from '@/components/DigitalIdCard';
 import { QrScannerModal } from '@/components/QrScannerModal';
-import { UserRole } from '@/lib/types';
+import { UserRole, Shift } from '@/lib/types';
 import {
   Stethoscope,
   Building2,
@@ -23,6 +23,7 @@ import {
   Filter,
   CreditCard,
   Camera,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function WorkersTalentPage() {
@@ -35,6 +36,7 @@ export default function WorkersTalentPage() {
     applyForShift,
     checkInShift,
     checkOutShift,
+    requestShiftReplacement,
   } = useApp();
 
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -43,6 +45,8 @@ export default function WorkersTalentPage() {
   const [showQrModal, setShowQrModal] = useState<string | null>(null);
   const [showIdCardModal, setShowIdCardModal] = useState<boolean>(false);
   const [activeScanShift, setActiveScanShift] = useState<{ id: string; title: string } | null>(null);
+  const [replacementShift, setReplacementShift] = useState<Shift | null>(null);
+  const [replacementReason, setReplacementReason] = useState<string>('Sudden clinical emergency / fever');
 
   // Worker credentials
   const currentCred = credentials.find((c) => c.userId === currentUser.id);
@@ -242,13 +246,23 @@ export default function WorkersTalentPage() {
 
                 <div className="flex items-center gap-2">
                   {shift.status === 'ASSIGNED' ? (
-                    <button
-                      onClick={() => setActiveScanShift({ id: shift.id, title: shift.title })}
-                      className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-2 shadow-sm"
-                    >
-                      <Camera className="w-4 h-4" />
-                      Scan Hospital Gate QR (Camera)
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setActiveScanShift({ id: shift.id, title: shift.title })}
+                        className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-2 shadow-sm"
+                      >
+                        <Camera className="w-4 h-4" />
+                        Scan Gate QR
+                      </button>
+                      <button
+                        onClick={() => setReplacementShift(shift)}
+                        className="px-3 py-2 rounded-xl border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                        title="Broadcast emergency replacement request to verified peers in seconds"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Request Replacement
+                      </button>
+                    </div>
                   ) : shift.status === 'IN_PROGRESS' ? (
                     <button
                       onClick={() => checkOutShift(shift.id)}
@@ -412,6 +426,55 @@ export default function WorkersTalentPage() {
             >
               Close & Begin Duty
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Duty Replacement Modal */}
+      {replacementShift && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2 text-rose-600">
+              <RotateCcw className="w-4 h-4" />
+              Request Shift Replacement (Duty Swap)
+            </h3>
+            <p className="text-xs text-slate-500">
+              Can&apos;t attend this shift? MedKonect will immediately broadcast an urgent coverage request to all verified matching peers in your city so the hospital is never left empty-handed.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  Reason for Replacement Request
+                </label>
+                <textarea
+                  value={replacementReason}
+                  onChange={(e) => setReplacementReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-medium"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setReplacementShift(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    requestShiftReplacement(replacementShift.id, replacementReason);
+                    setReplacementShift(null);
+                    alert('Duty replacement broadcasted! Matching verified peers in your city have been notified.');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-md"
+                >
+                  Confirm & Broadcast Swap
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
